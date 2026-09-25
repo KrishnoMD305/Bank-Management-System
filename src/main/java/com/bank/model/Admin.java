@@ -17,4 +17,23 @@ public class Admin {
         this.phoneNumber = phoneNumber;
         this.idNumber = idNumber;
     }
+
+    public String getUsername() {
+        return username;
+    }
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+    public String getFullName() {
+        return fullName;
+    }
+    public String getEmail() {
+        return email;
+    }
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+    public String getIdNumber() {
+        return idNumber;
+    }
 }
