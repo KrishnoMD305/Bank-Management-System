@@ -34,7 +34,71 @@
 
             </top>
 
-
+            <center>
+                        <TabPane tabClosingPolicy="UNAVAILABLE">
+                                    <Tab text="Accounts">
+                                        <SplitPane dividerPositions="0.55">
+                                            <VBox spacing="10">
+                                                <padding>
+                                                    <Insets top="10" bottom="10" left="10" right="10"/>
+                                                </padding>
+                                                <Label text="Accounts" styleClass="section-label"/>
+                                                <TableView fx:id="accountsTable" VBox.vgrow="ALWAYS">
+                                                    <columns>
+                                                        <TableColumn fx:id="colAccNo" text="Account #" prefWidth="110"/>
+                                                        <TableColumn fx:id="colType" text="Type" prefWidth="110"/>
+                                                        <TableColumn fx:id="colBalance" text="Balance" prefWidth="100"/>
+                                                        <TableColumn fx:id="colOwner" text="Owner" prefWidth="170"/>
+                                                    </columns>
+                                                </TableView>
+                        
+                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                    <Button text="Deposit" onAction="#handleDeposit"/>
+                                                    <Button text="Withdraw" onAction="#handleWithdraw"/>
+                                                    <Button text="Transfer" onAction="#handleTransfer"/>
+                                                    <Button text="Generate Bank Statement" onAction="#handleGenerateStatement"/>
+                                                </HBox>
+                                                <Label fx:id="statusLabel" styleClass="status-label"/>
+                                            </VBox>
+                        
+                                            <VBox spacing="10">
+                                                <padding>
+                                                    <Insets top="10" bottom="10" left="10" right="10"/>
+                                                </padding>
+                                                <Label text="Transaction History" styleClass="section-label"/>
+                                                <TableView fx:id="historyTable" VBox.vgrow="ALWAYS">
+                                                    <columns>
+                                                        <TableColumn fx:id="colTime" text="Time" prefWidth="140"/>
+                                                        <TableColumn fx:id="colTxnType" text="Type" prefWidth="100"/>
+                                                        <TableColumn fx:id="colAmount" text="Amount" prefWidth="90"/>
+                                                        <TableColumn fx:id="colBalanceAfter" text="Balance After" prefWidth="100"/>
+                                                        <TableColumn fx:id="colDescription" text="Description" prefWidth="160"/>
+                                                    </columns>
+                                                </TableView>
+                                            </VBox>
+                                        </SplitPane>
+                                    </Tab>
+                        
+                                    <Tab text="Users">
+                                        <VBox spacing="10">
+                                            <padding>
+                                                <Insets top="10" bottom="10" left="10" right="10"/>
+                                            </padding>
+                                            <Label text="Registered Customers" styleClass="section-label"/>
+                                            <TableView fx:id="usersTable" VBox.vgrow="ALWAYS">
+                                                <columns>
+                                                    <TableColumn fx:id="colUserId" text="User ID" prefWidth="100"/>
+                                                    <TableColumn fx:id="colUserName" text="Name" prefWidth="160"/>
+                                                    <TableColumn fx:id="colUserPhone" text="Phone" prefWidth="130"/>
+                                                    <TableColumn fx:id="colUserIdType" text="ID Type" prefWidth="120"/>
+                                                    <TableColumn fx:id="colUserIdNumber" text="ID Number" prefWidth="150"/>
+                                                    <TableColumn fx:id="colUserAccountCount" text="# Accounts" prefWidth="90"/>
+                                                </columns>
+                                            </TableView>
+                                        </VBox>
+                                    </Tab>
+                                </TabPane>
+            </center>
 
 
 </BorderPane>
