@@ -17,7 +17,22 @@
             fx:controller="com.bank.controller.DashboardController" styleClass="root-pane"
             prefWidth="1050" prefHeight="680">
 
+            <top>
+                        <VBox styleClass="header-bar">
+                                    <padding>
+                                        <Insets top="15" bottom="15" left="20" right="20"/>
+                                    </padding>
+                                    <HBox alignment="CENTER_LEFT" spacing="20">
+                                        <Label fx:id="welcomeLabel" styleClass="title-label"/>
+                                        <Pane HBox.hgrow="ALWAYS"/>
+                                        <Label fx:id="totalBalanceLabel" styleClass="subtitle-label"/>
+                                        <Button text="Open New Account" onAction="#handleOpenAccount" styleClass="primary-button"/>
+                                        <Button text="Refresh" onAction="#handleRefresh"/>
+                                        <Button text="Logout" onAction="#handleLogout"/>
+                                    </HBox>
+                        </VBox>
 
+            </top>
 
 
 
