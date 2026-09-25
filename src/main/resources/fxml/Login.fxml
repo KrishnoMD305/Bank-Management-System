@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="CENTER" spacing="15" xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.bank.controller.LoginController"
+      styleClass="root-pane">
+    <padding>
+        <Insets top="40" bottom="40" left="60" right="60"/>
+    </padding>
+
+    <Label text="Bank Management System" styleClass="title-label"/>
+    <Label text="Admin Login" styleClass="subtitle-label"/>
+
+    <VBox spacing="8" maxWidth="300">
+        <Label text="Username"/>
+        <TextField fx:id="usernameField" promptText="Enter username"/>
+        <Label text="Password"/>
+        <PasswordField fx:id="passwordField" promptText="Enter password"/>
+    </VBox>
+
+    <Button fx:id="loginButton" text="Login" onAction="#handleLogin" styleClass="primary-button" maxWidth="300"/>
+    <Hyperlink fx:id="registerLink" text="Don't have an admin account? Register" onAction="#handleGoToRegister"/>
+    <Label fx:id="statusLabel" styleClass="status-label"/>
+</VBox>

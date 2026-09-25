@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="CENTER" spacing="12" xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.bank.controller.TransferController"
+      styleClass="root-pane">
+    <padding>
+        <Insets top="25" bottom="25" left="30" right="30"/>
+    </padding>
+
+    <Label text="Transfer Funds" styleClass="title-label"/>
+    <Label fx:id="fromAccountLabel" styleClass="subtitle-label"/>
+
+    <VBox spacing="8" maxWidth="280">
+        <Label text="To Account Number"/>
+        <TextField fx:id="toAccountField" promptText="e.g. ACC100001"/>
+        <Label text="Amount ($)"/>
+        <TextField fx:id="amountField" promptText="0.00"/>
+    </VBox>
+
+    <HBox spacing="10" alignment="CENTER">
+        <Button fx:id="confirmButton" text="Confirm" onAction="#handleConfirm" styleClass="primary-button"/>
+        <Button fx:id="cancelButton" text="Cancel" onAction="#handleCancel"/>
+    </HBox>
+    <Label fx:id="statusLabel" styleClass="status-label"/>
+</VBox>

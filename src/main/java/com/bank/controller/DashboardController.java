@@ -1,0 +1,293 @@
+package com.bank.controller;
+
+import com.bank.Main;
+import com.bank.model.Account;
+import com.bank.model.AccountType;
+import com.bank.model.Customer;
+import com.bank.model.Transaction;
+import com.bank.service.BankService;
+import com.bank.service.TransactionResult;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+
+/**
+ * Controller for the main dashboard. Displays the current user's accounts
+ * (or all accounts, for admins), transaction history for the selected
+ * account, and wires up deposit/withdraw/transfer actions.
+ *
+ * All banking operations are submitted to BankService's background
+ * executor and wrapped in javafx.concurrent.Task so results are marshaled
+ * back to the FX Application Thread via setOnSucceeded/setOnFailed. The
+ * dashboard also registers a BankService listener so it live-refreshes
+ * whenever ANY background activity changes state - including the
+ * interest-accrual scheduler ticking in the background, with no user
+ * action required.
+ */
+public class DashboardController {
+
+    private static Customer currentUser;
+
+    public static void setCurrentUser(Customer c) {
+        currentUser = c;
+    }
+
+    public static Customer getCurrentUser() {
+        return currentUser;
+    }
+
+    @FXML
+    private Label welcomeLabel;
+    @FXML
+    private Label totalBalanceLabel;
+
+    @FXML
+    private TableView<Account> accountsTable;
+    @FXML
+    private TableColumn<Account, String> colAccNo;
+    @FXML
+    private TableColumn<Account, String> colType;
+    @FXML
+    private TableColumn<Account, Double> colBalance;
+    @FXML
+    private TableColumn<Account, String> colOwner;
+
+    @FXML
+    private TableView<Transaction> historyTable;
+    @FXML
+    private TableColumn<Transaction, String> colTime;
+    @FXML
+    private TableColumn<Transaction, String> colTxnType;
+    @FXML
+    private TableColumn<Transaction, Double> colAmount;
+    @FXML
+    private TableColumn<Transaction, Double> colBalanceAfter;
+    @FXML
+    private TableColumn<Transaction, String> colDescription;
+
+    @FXML
+    private ComboBox<AccountType> newAccountTypeBox;
+    @FXML
+    private TextField newAccountDepositField;
+    @FXML
+    private Label statusLabel;
+
+    private final ObservableList<Account> accountData = FXCollections.observableArrayList();
+    private final ObservableList<Transaction> historyData = FXCollections.observableArrayList();
+
+    @FXML
+    private void initialize() {
+        welcomeLabel.setText("Welcome, " + currentUser.getFullName() + (currentUser.isAdmin() ? "  (Admin)" : ""));
+
+        colAccNo.setCellValueFactory(new PropertyValueFactory<>("accountNumber"));
+        colType.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getType().toString()));
+        colBalance.setCellValueFactory(new PropertyValueFactory<>("balance"));
+        colOwner.setCellValueFactory(new PropertyValueFactory<>("ownerUsername"));
+        accountsTable.setItems(accountData);
+
+        colTime.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getFormattedTimestamp()));
+        colTxnType.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getType().toString()));
+        colAmount.setCellValueFactory(new PropertyValueFactory<>("amount"));
+        colBalanceAfter.setCellValueFactory(new PropertyValueFactory<>("balanceAfter"));
+        colDescription.setCellValueFactory(new PropertyValueFactory<>("description"));
+        historyTable.setItems(historyData);
+
+        newAccountTypeBox.getItems().addAll(AccountType.values());
+        newAccountTypeBox.getSelectionModel().selectFirst();
+
+        accountsTable.getSelectionModel().selectedItemProperty()
+                .addListener((obs, old, selected) -> loadHistory(selected));
+
+        // Live-refresh whenever BankService state changes on any thread
+        // (deposits, withdrawals, transfers, or the interest scheduler).
+        BankService.getInstance().addListener(this::refreshAccounts);
+
+        refreshAccounts();
+    }
+
+    private void refreshAccounts() {
+        Account selected = accountsTable.getSelectionModel().getSelectedItem();
+        String selectedAccNo = selected == null ? null : selected.getAccountNumber();
+
+        List<Account> accounts = currentUser.isAdmin()
+                ? BankService.getInstance().getAllAccounts()
+                : BankService.getInstance().getAccountsForCustomer(currentUser.getUsername());
+
+        accountData.setAll(accounts);
+
+        double total = accounts.stream().mapToDouble(Account::getBalance).sum();
+        totalBalanceLabel.setText(String.format("Total Balance: $%.2f", total));
+
+        if (selectedAccNo != null) {
+            accounts.stream()
+                    .filter(a -> a.getAccountNumber().equals(selectedAccNo))
+                    .findFirst()
+                    .ifPresentOrElse(a -> {
+                        accountsTable.getSelectionModel().select(a);
+                        loadHistory(a);
+                    }, () -> historyData.clear());
+        }
+    }
+
+    private void loadHistory(Account account) {
+        if (account == null) {
+            historyData.clear();
+            return;
+        }
+        List<Transaction> reversed = new ArrayList<>(account.getTransactionHistory());
+        Collections.reverse(reversed);
+        historyData.setAll(reversed);
+    }
+
+    @FXML
+    private void handleNewAccount() {
+        AccountType type = newAccountTypeBox.getValue();
+        String depositText = newAccountDepositField.getText().trim();
+        final double deposit;
+        try {
+            deposit = depositText.isEmpty() ? 0 : Double.parseDouble(depositText);
+        } catch (NumberFormatException e) {
+            statusLabel.setText("Invalid deposit amount.");
+            return;
+        }
+
+        Task<Account> task = new Task<>() {
+            @Override
+            protected Account call() {
+                return BankService.getInstance().openAccount(currentUser.getUsername(), type, deposit);
+            }
+        };
+        task.setOnSucceeded(e -> {
+            statusLabel.setText("New account opened: " + task.getValue().getAccountNumber());
+            newAccountDepositField.clear();
+        });
+        task.setOnFailed(e -> statusLabel.setText("Error: " + task.getException().getMessage()));
+        runBackground(task);
+    }
+
+    @FXML
+    private void handleDeposit() {
+        Account acc = accountsTable.getSelectionModel().getSelectedItem();
+        if (acc == null) {
+            statusLabel.setText("Select an account first.");
+            return;
+        }
+        showAmountDialog("Deposit",
+                amount -> submitAndReport(BankService.getInstance().submitDeposit(acc.getAccountNumber(), amount)));
+    }
+
+    @FXML
+    private void handleWithdraw() {
+        Account acc = accountsTable.getSelectionModel().getSelectedItem();
+        if (acc == null) {
+            statusLabel.setText("Select an account first.");
+            return;
+        }
+        showAmountDialog("Withdraw",
+                amount -> submitAndReport(BankService.getInstance().submitWithdraw(acc.getAccountNumber(), amount)));
+    }
+
+    @FXML
+    private void handleTransfer() {
+        Account acc = accountsTable.getSelectionModel().getSelectedItem();
+        if (acc == null) {
+            statusLabel.setText("Select an account first.");
+            return;
+        }
+        try {
+            FXMLLoader loader = new FXMLLoader(Main.class.getResource("/fxml/TransferDialog.fxml"));
+            Parent root = loader.load();
+            TransferController controller = loader.getController();
+            controller.setFromAccount(acc.getAccountNumber());
+
+            Stage dialog = new Stage();
+            dialog.initModality(Modality.APPLICATION_MODAL);
+            dialog.setTitle("Transfer Funds");
+            dialog.setScene(new Scene(root));
+            dialog.showAndWait();
+
+            statusLabel.setText(controller.getResultMessage());
+        } catch (IOException e) {
+            statusLabel.setText("Failed to open transfer dialog.");
+        }
+    }
+
+    @FXML
+    private void handleRefresh() {
+        refreshAccounts();
+        statusLabel.setText("Refreshed.");
+    }
+
+    @FXML
+    private void handleLogout() {
+        currentUser = null;
+        try {
+            Main.switchScene("/fxml/Login.fxml", "Bank Management System - Admin Login");
+        } catch (IOException e) {
+            statusLabel.setText("Failed to log out.");
+        }
+    }
+
+    private interface AmountAction {
+        void run(double amount);
+    }
+
+    private void showAmountDialog(String title, AmountAction action) {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle(title);
+        dialog.setHeaderText(title + " Amount");
+        dialog.setContentText("Amount ($):");
+        dialog.showAndWait().ifPresent(text -> {
+            try {
+                double amount = Double.parseDouble(text.trim());
+                action.run(amount);
+            } catch (NumberFormatException e) {
+                statusLabel.setText("Invalid amount.");
+            }
+        });
+    }
+
+    private void submitAndReport(Future<TransactionResult> future) {
+        statusLabel.setText("Processing...");
+        Task<TransactionResult> task = new Task<>() {
+            @Override
+            protected TransactionResult call() throws ExecutionException, InterruptedException {
+                return future.get();
+            }
+        };
+        task.setOnSucceeded(e -> {
+            TransactionResult result = task.getValue();
+            statusLabel.setText(result.isSuccess() ? "Success!" : "Failed: " + result.getMessage());
+        });
+        task.setOnFailed(e -> statusLabel.setText("Error: " + task.getException().getMessage()));
+        runBackground(task);
+    }
+
+    private void runBackground(Task<?> task) {
+        Thread t = new Thread(task, "dashboard-task");
+        t.setDaemon(true);
+        t.start();
+    }
+}
