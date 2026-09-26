@@ -334,6 +334,30 @@ public final class SQLiteDatabase {
         }
     }
 
+    private static int readIntMetadata(Connection c, String key, int defaultValue) throws SQLException {
+        try (PreparedStatement ps = c.prepareStatement("SELECT value FROM metadata WHERE key = ?")) {
+            ps.setString(1, key);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? Integer.parseInt(rs.getString(1)) : defaultValue;
+            }
+        }
+    }
 
+    private static void writeMetadata(Connection c, String key, String value) throws SQLException {
+        try (PreparedStatement ps = c.prepareStatement("""
+                INSERT INTO metadata(key, value) VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                """)) {
+            ps.setString(1, key);
+            ps.setString(2, value);
+            ps.executeUpdate();
+        }
+    }
+
+    private static LocalDateTime parseDateTime(String value) {
+        return LocalDateTime.parse(value);
+    }
+
+    public record LoadedUsers(Map<String, User> users, Map<String, Account> accounts, int userSequence, int accountSequence) {}
     
 }
