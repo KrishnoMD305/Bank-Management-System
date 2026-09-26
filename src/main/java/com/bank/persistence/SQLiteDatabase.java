@@ -37,4 +37,91 @@ public final class SQLiteDatabase {
         return connection;
     }
 
+    public static boolean isSQLiteDatabase(File file) {
+        if (!file.isFile() || file.length() < 16) {
+            return false;
+        }
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+            byte[] header = new byte[16];
+            raf.readFully(header);
+            return SQLITE_HEADER.equals(new String(header, java.nio.charset.StandardCharsets.ISO_8859_1));
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    public static void initialize(File adminsDb, File usersDb) {
+        initializeAdmins(adminsDb);
+        initializeUsers(usersDb);
+    }
+
+    private static void initializeAdmins(File file) {
+        try (Connection c = connect(file);
+             Statement s = c.createStatement()) {
+            s.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS admins (
+                        username TEXT PRIMARY KEY,
+                        password_hash TEXT NOT NULL,
+                        full_name TEXT NOT NULL,
+                        email TEXT,
+                        phone_number TEXT,
+                        id_number TEXT
+                    )
+                    """);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Could not initialize SQLite database: " + file, e);
+        }
+    }
+
+    private static void initializeUsers(File file) {
+        try (Connection c = connect(file); Statement s = c.createStatement()) {
+
+            s.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS users (
+                        user_id TEXT PRIMARY KEY,
+                        full_name TEXT NOT NULL,
+                        phone_number TEXT,
+                        id_type TEXT NOT NULL,
+                        id_number TEXT NOT NULL UNIQUE,
+                        created_at TEXT NOT NULL
+                    )
+                    """);
+
+            s.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS accounts (
+                        account_number TEXT PRIMARY KEY,
+                        owner_user_id TEXT NOT NULL,
+                        account_type TEXT NOT NULL,
+                        balance REAL NOT NULL DEFAULT 0,
+                        created_at TEXT NOT NULL,
+                        FOREIGN KEY (owner_user_id) REFERENCES users(user_id)
+                            ON UPDATE CASCADE ON DELETE CASCADE
+                    )
+                    """);
+
+            s.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS transactions (
+                        id INTEGER PRIMARY KEY,
+                        account_number TEXT NOT NULL,
+                        transaction_type TEXT NOT NULL,
+                        amount REAL NOT NULL,
+                        balance_after REAL NOT NULL,
+                        description TEXT,
+                        timestamp TEXT NOT NULL,
+                        FOREIGN KEY (account_number) REFERENCES accounts(account_number)
+                            ON UPDATE CASCADE ON DELETE CASCADE
+                    )
+                    """);
+
+            s.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS metadata (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL
+                    )
+                    """);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Could not initialize SQLite database: " + file, e);
+        }
+    }
+
 }
