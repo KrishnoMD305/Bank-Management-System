@@ -181,5 +181,159 @@ public final class SQLiteDatabase {
         }
     }
 
-   
+    public static LoadedUsers loadUsers(File file) {
+        Map<String, User> users = new ConcurrentHashMap<>();
+        Map<String, Account> accounts = new ConcurrentHashMap<>();
+
+        try (Connection c = connect(file)) {
+            String userSql = """
+                    SELECT user_id, full_name, phone_number, id_type, id_number, created_at
+                    FROM users
+                    ORDER BY user_id
+                    """;
+            try (PreparedStatement ps = c.prepareStatement(userSql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    User user = new User(rs.getString("user_id"), rs.getString("full_name"), rs.getString("phone_number"), IdType.valueOf(rs.getString("id_type")), rs.getString("id_number"), parseDateTime(rs.getString("created_at")));
+                    users.put(user.getUserId(), user);
+                }
+            }
+
+            String accountSql = """
+                    SELECT account_number, owner_user_id, account_type, balance, created_at
+                    FROM accounts
+                    ORDER BY account_number
+                    """;
+            try (PreparedStatement ps = c.prepareStatement(accountSql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Account account = new Account(rs.getString("account_number"), rs.getString("owner_user_id"), AccountType.valueOf(rs.getString("account_type")), rs.getDouble("balance"), parseDateTime(rs.getString("created_at")));
+                    accounts.put(account.getAccountNumber(), account);
+
+                    User owner = users.get(account.getOwnerUserId());
+                    if (owner != null) {
+                        owner.addAccountNumber(account.getAccountNumber());
+                    }
+                }
+            }
+
+            String transactionSql = """
+                    SELECT id, account_number, transaction_type, amount, balance_after, description, timestamp
+                    FROM transactions
+                    ORDER BY id
+                    """;
+            long maxTransactionId = 0;
+            try (PreparedStatement ps = c.prepareStatement(transactionSql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    long id = rs.getLong("id");
+                    Transaction transaction = new Transaction(
+                            id,
+                            rs.getString("account_number"),
+                            TransactionType.valueOf(rs.getString("transaction_type")),
+                            rs.getDouble("amount"),
+                            rs.getDouble("balance_after"),
+                            rs.getString("description"),
+                            parseDateTime(rs.getString("timestamp"))
+                    );
+                    Account account = accounts.get(transaction.getAccountNumber());
+                    if (account != null) {
+                        account.restoreTransaction(transaction);
+                    }
+                    maxTransactionId = Math.max(maxTransactionId, id);
+                }
+            }
+            Transaction.ensureNextId(maxTransactionId + 1);
+            int userSequence = readIntMetadata(c, "user_sequence", 100_000);
+            int accountSequence = readIntMetadata(c, "account_sequence", 100_000);
+
+            return new LoadedUsers(users, accounts, userSequence, accountSequence);
+        } catch (SQLException | IllegalArgumentException e) {
+            throw new IllegalStateException("Could not load users/accounts from " + file, e);
+        }
+    }
+
+    public static void saveUsers(File file, Collection<User> users, Collection<Account> accounts, int userSequence, int accountSequence) {
+        try (Connection c = connect(file)) {
+            c.setAutoCommit(false);
+            try {
+                try (Statement clear = c.createStatement()) {
+                    clear.executeUpdate("DELETE FROM transactions");
+                    clear.executeUpdate("DELETE FROM accounts");
+                    clear.executeUpdate("DELETE FROM users");
+                }
+
+                String userSql = """
+                        INSERT INTO users(user_id, full_name, phone_number, id_type, id_number, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        """;
+                try (PreparedStatement ps = c.prepareStatement(userSql)) {
+                    for (User user : users) {
+                        ps.setString(1, user.getUserId());
+                        ps.setString(2, user.getFullName());
+                        ps.setString(3, user.getPhoneNumber());
+                        ps.setString(4, user.getIdType().name());
+                        ps.setString(5, user.getIdNumber());
+                        ps.setString(6, user.getCreatedAt().toString());
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+
+                String accountSql = """
+                        INSERT INTO accounts(account_number, owner_user_id, account_type, balance, created_at)
+                        VALUES (?, ?, ?, ?, ?)
+                        """;
+                try (PreparedStatement ps = c.prepareStatement(accountSql)) {
+                    for (Account account : accounts) {
+                        ps.setString(1, account.getAccountNumber());
+                        ps.setString(2, account.getOwnerUserId());
+                        ps.setString(3, account.getType().name());
+                        ps.setDouble(4, account.getBalance());
+                        ps.setString(5, account.getCreatedAt().toString());
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+
+                String transactionSql = """
+                        INSERT INTO transactions(
+                            id, account_number, transaction_type, amount,
+                            balance_after, description, timestamp
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """;
+                try (PreparedStatement ps = c.prepareStatement(transactionSql)) {
+                    for (Account account : accounts) {
+                        for (Transaction transaction : account.getTransactionHistory()) {
+                            ps.setLong(1, transaction.getId());
+                            ps.setString(2, transaction.getAccountNumber());
+                            ps.setString(3, transaction.getType().name());
+                            ps.setDouble(4, transaction.getAmount());
+                            ps.setDouble(5, transaction.getBalanceAfter());
+                            ps.setString(6, transaction.getDescription());
+                            ps.setString(7, transaction.getTimestamp().toString());
+                            ps.addBatch();
+                        }
+                    }
+                    ps.executeBatch();
+                }
+
+                writeMetadata(c, "user_sequence", Integer.toString(userSequence));
+                writeMetadata(c, "account_sequence", Integer.toString(accountSequence));
+
+                c.commit();
+            } catch (SQLException e) {
+                c.rollback();
+                throw e;
+            } finally {
+                c.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Could not save users/accounts to " + file, e);
+        }
+    }
+
+
+    
 }
