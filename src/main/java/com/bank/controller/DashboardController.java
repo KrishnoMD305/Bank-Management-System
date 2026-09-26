@@ -307,7 +307,7 @@ public class DashboardController {
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle(title);
         dialog.setHeaderText(title + " Amount");
-        dialog.setContentText("Amount ($):");
+        dialog.setContentText("Amount (৳):");
         dialog.showAndWait().ifPresent(text -> {
             try {
                 double amount = Double.parseDouble(text.trim());
