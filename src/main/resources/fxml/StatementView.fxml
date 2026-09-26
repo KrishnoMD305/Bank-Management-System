@@ -1,1 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox spacing="10" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.bank.controller.StatementController" styleClass="root-pane"
+      prefWidth="640" prefHeight="520">
+    <padding>
+        <Insets top="20" bottom="20" left="24" right="24"/>
+    </padding>
+
+    <Label text="Bank Statement" styleClass="title-label"/>
+
+    <VBox spacing="4">
+        <Label fx:id="accountIdLabel" styleClass="subtitle-label"/>
+        <Label fx:id="accountTypeLabel" styleClass="subtitle-label"/>
+        <Label fx:id="customerLabel" styleClass="subtitle-label"/>
+        <Label fx:id="balanceLabel" styleClass="subtitle-label"/>
+        <Label fx:id="generatedAtLabel" styleClass="subtitle-label"/>
+    </VBox>
+
+    <Label text="Transactions" styleClass="section-label"/>
+    <TableView fx:id="statementTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colTime" text="Time" prefWidth="140"/>
+            <TableColumn fx:id="colType" text="Type" prefWidth="100"/>
+            <TableColumn fx:id="colAmount" text="Amount" prefWidth="90"/>
+            <TableColumn fx:id="colBalanceAfter" text="Balance After" prefWidth="100"/>
+            <TableColumn fx:id="colDescription" text="Description" prefWidth="160"/>
+        </columns>
+    </TableView>
+
+    <Label fx:id="savedFileLabel" styleClass="status-label"/>
+</VBox>
