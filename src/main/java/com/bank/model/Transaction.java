@@ -62,6 +62,6 @@ public class Transaction implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("[%s] %s %s $%.2f -> Balance: ৳ %.2f (%s)", getFormattedTimestamp(), accountNumber, type, amount, balanceAfter, description);
+        return String.format("[%s] %s %s ৳ %.2f -> Balance: ৳ %.2f (%s)", getFormattedTimestamp(), accountNumber, type, amount, balanceAfter, description);
     }
 }
