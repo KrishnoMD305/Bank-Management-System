@@ -1,9 +1,9 @@
 package com.bank.model;
 
 public enum AccountType {
-    SAVINGS("Savings", 0.03),   
-    CURRENT("Current", 0.0),           
-    FIXED_DEPOSIT("Fixed Deposit", 0.06), 
+    SAVINGS("Savings", 0.03),
+    CURRENT("Current", 0.0),
+    FIXED_DEPOSIT("Fixed Deposit", 0.06),
     STUDENT("Student Account", 0.015);
 
     private final String label;
@@ -13,5 +13,11 @@ public enum AccountType {
         this.label = label;
         this.annualInterestRate = annualInterestRate;
     }
-
+    public double getInterestRate() {
+        return annualInterestRate;
+    }
+    @Override
+    public String toString() {
+        return label;
+    }
 }
