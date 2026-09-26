@@ -30,29 +30,12 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-/**
- * Controller for the main dashboard. Only admins log into this
- * application, so the dashboard always shows every account and every
- * registered customer across the whole bank; it wires up account creation
- * (via the "Open New Account" dialog), deposit/withdraw/transfer, and
- * displays a read-only list of customers (Users).
- *
- * All banking operations are submitted to BankService's background
- * executor and wrapped in javafx.concurrent.Task so results are marshaled
- * back to the FX Application Thread via setOnSucceeded/setOnFailed. The
- * dashboard also registers a BankService listener so it live-refreshes
- * whenever ANY background activity changes state - including the
- * interest-accrual scheduler ticking in the background, with no user
- * action required.
- */
 public class DashboardController {
 
     private static Admin currentAdmin;
-
     public static void setCurrentAdmin(Admin a) {
         currentAdmin = a;
     }
-
     public static Admin getCurrentAdmin() {
         return currentAdmin;
     }
@@ -134,14 +117,9 @@ public class DashboardController {
                 new javafx.beans.property.SimpleIntegerProperty(cd.getValue().getAccountNumbers().size()));
         usersTable.setItems(userData);
 
-        accountsTable.getSelectionModel().selectedItemProperty()
-                .addListener((obs, old, selected) -> loadHistory(selected));
+        accountsTable.getSelectionModel().selectedItemProperty().addListener((obs, old, selected) -> loadHistory(selected));
 
-        // Live-refresh whenever BankService state changes on any thread
-        // (deposits, withdrawals, transfers, new accounts, or the interest
-        // scheduler).
         BankService.getInstance().addListener(this::refreshAll);
-
         refreshAll();
     }
 
@@ -193,7 +171,24 @@ public class DashboardController {
         historyData.setAll(reversed);
     }
 
+    @FXML
+    private void handleOpenAccount() {
+        try {
+            FXMLLoader loader = new FXMLLoader(Main.class.getResource("/fxml/OpenAccountDialog.fxml"));
+            Parent root = loader.load();
+            OpenAccountController controller = loader.getController();
 
+            Stage dialog = new Stage();
+            dialog.initModality(Modality.APPLICATION_MODAL);
+            dialog.setTitle("Open New Account");
+            dialog.setScene(new Scene(root));
+            dialog.showAndWait();
+
+            statusLabel.setText(controller.getResultMessage());
+        } catch (IOException e) {
+            statusLabel.setText("Failed to open the account-creation dialog.");
+        }
+    }
 
     @FXML
     private void handleDeposit() {
@@ -217,11 +212,76 @@ public class DashboardController {
                 amount -> submitAndReport(BankService.getInstance().submitWithdraw(acc.getAccountNumber(), amount)));
     }
 
+    @FXML
+    private void handleTransfer() {
+        Account acc = accountsTable.getSelectionModel().getSelectedItem();
+        if (acc == null) {
+            statusLabel.setText("Select an account first.");
+            return;
+        }
+        try {
+            FXMLLoader loader = new FXMLLoader(Main.class.getResource("/fxml/TransferDialog.fxml"));
+            Parent root = loader.load();
+            TransferController controller = loader.getController();
+            controller.setFromAccount(acc.getAccountNumber());
 
+            Stage dialog = new Stage();
+            dialog.initModality(Modality.APPLICATION_MODAL);
+            dialog.setTitle("Transfer Funds");
+            dialog.setScene(new Scene(root));
+            dialog.showAndWait();
 
+            statusLabel.setText(controller.getResultMessage());
+        } catch (IOException e) {
+            statusLabel.setText("Failed to open transfer dialog.");
+        }
+    }
 
+    @FXML
+    private void handleGenerateStatement() {
+        Account acc = accountsTable.getSelectionModel().getSelectedItem();
+        if (acc == null) {
+            statusLabel.setText("Select an account first.");
+            return;
+        }
 
+        statusLabel.setText("Generating statement...");
+        Task<java.nio.file.Path> task = new Task<>() {
+            @Override
+            protected java.nio.file.Path call() throws IOException {
+                return com.bank.service.StatementGenerator.generate(acc, BankService.getInstance().getUser(acc.getOwnerUserId()));
+            }
+        };
+        task.setOnSucceeded(e -> {
+            java.nio.file.Path savedFile = task.getValue();
+            statusLabel.setText("Statement saved to " + savedFile);
+            openStatementWindow(acc, savedFile);
+        });
+        task.setOnFailed(e -> statusLabel.setText("Failed to generate statement: " + task.getException().getMessage()));
+        runBackground(task);
+    }
 
+    private void openStatementWindow(Account account, java.nio.file.Path savedFile) {
+        try {
+            FXMLLoader loader = new FXMLLoader(Main.class.getResource("/fxml/StatementView.fxml"));
+            Parent root = loader.load();
+            StatementController controller = loader.getController();
+            controller.setStatement(account, BankService.getInstance().getUser(account.getOwnerUserId()), savedFile);
+
+            Scene scene = new Scene(root);
+            var cssUrl = Main.class.getResource("/css/style.css");
+            if (cssUrl != null) {
+                scene.getStylesheets().add(cssUrl.toExternalForm());
+            }
+
+            Stage stage = new Stage();
+            stage.setTitle("Bank Statement - " + account.getAccountNumber());
+            stage.setScene(scene);
+            stage.show();
+        } catch (IOException e) {
+            statusLabel.setText("Statement saved, but failed to open the statement window.");
+        }
+    }
 
     @FXML
     private void handleRefresh() {
@@ -229,6 +289,15 @@ public class DashboardController {
         statusLabel.setText("Refreshed.");
     }
 
+    @FXML
+    private void handleLogout() {
+        currentAdmin = null;
+        try {
+            Main.switchScene("/fxml/Login.fxml", "Bank Management System - Admin Login");
+        } catch (IOException e) {
+            statusLabel.setText("Failed to log out.");
+        }
+    }
 
     private interface AmountAction {
         void run(double amount);
