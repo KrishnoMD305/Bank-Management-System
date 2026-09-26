@@ -20,6 +20,21 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class SQLiteDatabase {
+    private static final String SQLITE_HEADER = "SQLite format 3\u0000";
 
+    private SQLiteDatabase() {}
+
+    public static Connection connect(File file) throws SQLException {
+        File parent = file.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs() && !parent.isDirectory()) {
+            throw new SQLException("Could not create database directory: " + parent);
+        }
+
+        Connection connection = DriverManager.getConnection("jdbc:sqlite:" + file.getPath());
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("PRAGMA foreign_keys = ON");
+        }
+        return connection;
+    }
 
 }
