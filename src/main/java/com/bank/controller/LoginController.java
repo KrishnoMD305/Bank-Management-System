@@ -28,7 +28,7 @@ public class LoginController {
 
     @FXML
     private void initialize() {
-        statusLabel.setText("Default admin login: admin / admin123");
+        statusLabel.setText("");
     }
     @FXML
     private void handleLogin() {
