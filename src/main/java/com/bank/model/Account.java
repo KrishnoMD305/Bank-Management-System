@@ -1,5 +1,7 @@
 package com.bank.model;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -25,5 +27,14 @@ public class Account {
         this.type = type;
         this.balance = initialBalance;
         this.createdAt = createdAt;
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        lock = new ReentrantLock();
+    }
+    
+    public ReentrantLock getLock() {
+        return lock;
     }
 }
