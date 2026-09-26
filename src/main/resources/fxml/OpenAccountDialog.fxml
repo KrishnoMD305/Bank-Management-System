@@ -29,7 +29,7 @@
         <TextField fx:id="idNumberField" promptText="ID number"/>
         <Label text="Account Type"/>
         <ComboBox fx:id="accountTypeBox" maxWidth="Infinity"/>
-        <Label text="Initial Deposit ($)"/>
+        <Label text="Initial Deposit (৳)"/>
         <TextField fx:id="depositField" promptText="0.00"/>
     </VBox>
 
