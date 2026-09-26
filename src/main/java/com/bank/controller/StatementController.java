@@ -58,7 +58,7 @@ public class StatementController {
         accountIdLabel.setText("Account #: " + account.getAccountNumber());
         accountTypeLabel.setText("Type: " + account.getType());
         customerLabel.setText(owner != null ? "Customer: " + owner.getFullName() + " (" + owner.getUserId() + ")" : "Customer: " + account.getOwnerUserId());
-        balanceLabel.setText(String.format("Current Balance: $%.2f", account.getBalance()));
+        balanceLabel.setText(String.format("Current Balance: ৳ %.2f", account.getBalance()));
         generatedAtLabel.setText("Generated: " + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         savedFileLabel.setText("Saved to: " + savedFile.toAbsolutePath());
 
