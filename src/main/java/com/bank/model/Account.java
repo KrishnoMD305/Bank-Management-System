@@ -2,13 +2,14 @@ package com.bank.model;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class Account {
+public class Account implements Serializable {
     private static final long serialVersionUID = 1L;
     private final String accountNumber;
     private final String ownerUserId;
@@ -39,6 +40,75 @@ public class Account {
         return lock;
     }
 
+    public Transaction deposit(double amount, String description) {
+        lock.lock();
+        try {
+            balance += amount;
+            Transaction t = new Transaction(accountNumber, TransactionType.DEPOSIT, amount, balance, description);
+            transactionHistory.add(t);
+            return t;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public Transaction withdraw(double amount, String description) {
+        lock.lock();
+        try {
+            if (amount > balance) {
+                return null;
+            }
+            balance -= amount;
+            Transaction t = new Transaction(accountNumber, TransactionType.WITHDRAW, amount, balance, description);
+            transactionHistory.add(t);
+            return t;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public Transaction sendTransfer(double amount, String description) {
+        lock.lock();
+        try {
+            if (amount > balance) {
+                return null;
+            }
+            balance -= amount;
+            Transaction t = new Transaction(accountNumber, TransactionType.TRANSFER_OUT, amount, balance, description);
+            transactionHistory.add(t);
+            return t;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public Transaction receiveTransfer(double amount, String description) {
+        lock.lock();
+        try {
+            balance += amount;
+            Transaction t = new Transaction(accountNumber, TransactionType.TRANSFER_IN, amount, balance, description);
+            transactionHistory.add(t);
+            return t;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public Transaction applyInterest(double periodicRate) {
+        lock.lock();
+        try {
+            double interest = balance * periodicRate;
+            if (interest <= 0) {
+                return null;
+            }
+            balance += interest;
+            Transaction t = new Transaction(accountNumber, TransactionType.INTEREST, interest, balance, "Interest credited");
+            transactionHistory.add(t);
+            return t;
+        } finally {
+            lock.unlock();
+        }
+    }
 
     public double getBalance() {
         return balance;
@@ -59,4 +129,7 @@ public class Account {
         return Collections.unmodifiableList(transactionHistory);
     }
 
+    public void restoreTransaction(Transaction transaction) {
+        transactionHistory.add(transaction);
+    }
 }
