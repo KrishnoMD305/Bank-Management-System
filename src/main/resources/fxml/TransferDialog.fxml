@@ -20,7 +20,7 @@
     <VBox spacing="8" maxWidth="280">
         <Label text="To Account Number"/>
         <TextField fx:id="toAccountField" promptText="e.g. ACC100001"/>
-        <Label text="Amount ($)"/>
+        <Label text="Amount (৳)"/>
         <TextField fx:id="amountField" promptText="0.00"/>
     </VBox>
 
