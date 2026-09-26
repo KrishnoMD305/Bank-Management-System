@@ -144,7 +144,7 @@ public class DashboardController {
         accountData.setAll(accounts);
 
         double total = accounts.stream().mapToDouble(Account::getBalance).sum();
-        totalBalanceLabel.setText(String.format("Total Balance: $%.2f", total));
+        totalBalanceLabel.setText(String.format("Total Balance: ৳ %.2f", total));
 
         if (selectedAccNo != null) {
             accounts.stream()
