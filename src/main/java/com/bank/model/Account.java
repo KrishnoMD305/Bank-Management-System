@@ -3,6 +3,7 @@ package com.bank.model;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
@@ -33,8 +34,29 @@ public class Account {
         in.defaultReadObject();
         lock = new ReentrantLock();
     }
-    
+
     public ReentrantLock getLock() {
         return lock;
     }
+
+
+    public double getBalance() {
+        return balance;
+    }
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+    public String getOwnerUserId() {
+        return ownerUserId;
+    }
+    public AccountType getType() {
+        return type;
+    }
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    public List<Transaction> getTransactionHistory() {
+        return Collections.unmodifiableList(transactionHistory);
+    }
+
 }
