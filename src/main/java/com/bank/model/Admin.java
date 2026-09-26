@@ -12,8 +12,10 @@ public class Admin implements Serializable {
     private final String phoneNumber;
     private final String idNumber;
 
-    public Admin(String username, String fullName, String email, String phoneNumber, String idNumber) {
+    public Admin(String username, String passwordHash, String fullName, String email,
+                 String phoneNumber, String idNumber) {
         this.username = username;
+        this.passwordHash = passwordHash;
         this.fullName = fullName;
         this.email = email;
         this.phoneNumber = phoneNumber;
